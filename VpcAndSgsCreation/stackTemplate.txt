@@ -1,0 +1,830 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters" : {
+    "Environment" : {
+      "Description" : "Whether this is for Non-Production or Production",
+      "Type"  : "String",
+      "Default" : "Non-Production",
+      "AllowedValues" : ["Non-Production"], 
+      "ConstraintDescription" : "must be non-Production, the only option currently."
+    },
+    "MNE" : {
+      "Description" : "App Mnemonic or client identifier",
+      "Type"  : "String",
+      "Default" : "RND",
+      "AllowedValues" : ["RND"], 
+      "ConstraintDescription" : "must be RND, the only option currently."
+    },
+    "Owner" : {
+      "Description" : "Name of owner",
+      "Type"  : "String",
+      "MaxLength" : 64,
+      "Default" : "Ken Kress",
+      "ConstraintDescription" : "must be less than 64 characters"
+    }
+  }, 
+  "Mappings" : {
+    "IP" : {
+      "RNDLB"   : {"A" : "10.4.0.0/28",   "B" : "10.4.0.16/28",  "C" : "10.4.0.32/28", "ALL": "10.4.0.0/26"},
+      "RNDNAT"  : {"A" : "10.4.0.64/28",  "B" : "10.4.0.80/28",  "C" : "10.4.0.96/28", "ALL": "10.4.0.64/26"},
+      "RNDApp"  : {"A" : "10.4.0.128/28", "B" : "10.4.0.144/28", "C" : "10.4.0.160/28","ALL": "10.4.0.128/26"},
+      "RNDDB"   : {"A" : "10.4.0.192/28", "B" : "10.4.0.208/28", "C" : "10.4.0.224/28","ALL": "10.4.0.192/26"},
+      "RNDPUBLIC"  : {"ALL" : "10.4.0.0/25" }, 
+      "RNDPRIVATE" : {"ALL" : "10.4.0.128/25" },
+      "RNDALL"     : {"ALL" : "10.4.0.0/24" },
+
+      "XXXLB"   : {"A" : "10.4.1.0/28",   "B" : "10.4.1.16/28",  "C" : "10.4.1.32/28", "ALL": "10.4.1.0/26"},
+      "xxxNAT"  : {"A" : "10.4.1.64/28",  "B" : "10.4.1.80/28",  "C" : "10.4.1.96/28", "ALL": "10.4.1.64/26"},
+      "xxxApp"  : {"A" : "10.4.1.128/28", "B" : "10.4.1.144/28", "C" : "10.4.1.160/28","ALL": "10.4.1.128/26"},
+      "xxxDB"   : {"A" : "10.4.1.192/28", "B" : "10.4.1.208/28", "C" : "10.4.1.224/28","ALL": "10.4.1.192/26"},
+      "xxxPUBLIC"  : {"ALL" : "10.4.1.0/25" }, 
+      "xxxPRIVATE" : {"ALL" : "10.4.1.128/25" },
+      "xxxALL"     : {"ALL" : "10.4.1.0/24" }
+    },
+    "Clients" : {
+      "RND" : { 
+        "LB"        : "RNDLB",      "NAT"       : "RNDNAT",         "App"       : "RNDApp", 
+        "DB"        : "RNDDB",      "Public"    : "RNDPUBLIC",      "Private"   : "RNDPRIVATE",
+        "ALL"       : "RNDALL"
+      },
+      "XXX" : { 
+        "LB"        : "XXXLB",      "NAT"       : "XXXNAT",         "App"       : "XXXApp", 
+        "DB"        : "XXXDB",      "Public"    : "XXXPUBLIC",      "Private"   : "XXXPRIVATE",
+        "ALL"       : "XXXALL"
+      }
+    }
+  },
+  "Resources": {
+    "clientVPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "ALL"]}, "ALL"]},
+        "InstanceTenancy": "default",
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "true",
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["", ["Client ",{"Ref" : "MNE"}, " VPC"]] }},
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "LBASubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "LB"]}, "A"]}, 
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"a"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " LB Subnet A"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "LBBSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "LB"]}, "B"]},
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"b"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " LB Subnet B"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "LBCSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "LB"]}, "C"]}, 
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"c"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " LB Subnet C"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    }, 
+    "NATASubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "NAT"]}, "A"]},
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"a"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " NAT Subnet A"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "NATBSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "NAT"]}, "B"]}, 
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"b"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " NAT Subnet B"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "NATCSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "NAT"]}, "C"]}, 
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"c"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " NAT Subnet C"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    }, 
+    "AppASubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "App"]}, "A"]},
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"a"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " App Subnet A"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "AppBSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "App"]}, "B"]},
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"b"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " App Subnet B"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "AppCSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "App"]}, "C"]},
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"c"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " App Subnet C"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    }, 
+    "DBASubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "DB"]}, "A"]},
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"a"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " DB Subnet A"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "DBBSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "DB"]}, "B"]},
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"b"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " DB Subnet B"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "DBCSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "DB"]}, "C"]},
+        "AvailabilityZone": { "Fn::Join" : ["", [{"Ref": "AWS::Region"},"c"] ] }, 
+        "VpcId": {
+          "Ref": "clientVPC"
+        },
+        "Tags": [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " DB Subnet C"]] }}, 
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "internetGateway" : {
+      "Type"        : "AWS::EC2::InternetGateway",
+      "Properties"  : {
+        "Tags" : [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",["Client ", {"Ref" : "MNE"} , " Internet Gateway"]] }},
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} },
+          { "Key": "LOB",       "Value": "IMTPE" },
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "gatewayToInternet" : {
+      "Type"        : "AWS::EC2::VPCGatewayAttachment",
+      "Properties"  : {
+        "VpcId"             : { "Ref" : "clientVPC" },
+        "InternetGatewayId" : { "Ref" : "internetGateway" }
+      }
+    },
+    "publicRouteTable"    : {
+      "Type"        : "AWS::EC2::RouteTable",
+      "Properties"  : {
+        "VpcId"     : { "Ref" : "clientVPC"}, 
+        "Tags"      : [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",["Client ", {"Ref" : "MNE"} , " Public"]] }},
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} },
+          { "Key": "LOB",       "Value": "IMTPE" },
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "publicRoute" : {
+      "Type"        : "AWS::EC2::Route",
+      "Properties"  : {
+        "DestinationCidrBlock"  : "0.0.0.0/0",
+        "RouteTableId"          : { "Ref" : "publicRouteTable"   },
+        "GatewayId"             : { "Ref" : "internetGateway" }
+      },
+      "DependsOn"   : "gatewayToInternet"
+    },
+
+    "LBATableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "LBASubnet" },
+        "RouteTableId" : { "Ref" : "publicRouteTable" }
+      }
+    },
+
+    "LBBTableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "LBBSubnet" },
+        "RouteTableId" : { "Ref" : "publicRouteTable" }
+      }
+    },
+    "LBCTableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "LBCSubnet" },
+        "RouteTableId" : { "Ref" : "publicRouteTable" }
+      }
+    },
+    "NATATableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "NATASubnet" },
+        "RouteTableId" : { "Ref" : "publicRouteTable" }
+      }
+    },
+
+    "NATBTableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "NATBSubnet" },
+        "RouteTableId" : { "Ref" : "publicRouteTable" }
+      }
+    },
+    "NATCTableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "NATCSubnet" },
+        "RouteTableId" : { "Ref" : "publicRouteTable" }
+      }
+    },
+    "privateRouteTable"    : {
+      "Type"        : "AWS::EC2::RouteTable",
+      "Properties"  : {
+        "VpcId"     : { "Ref" : "clientVPC"}, 
+        "Tags"      : [
+          { "Key": "Name",      "Value": {"Fn::Join" : ["",["Client ", {"Ref" : "MNE"} , " Private"]] }},
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} },
+          { "Key": "LOB",       "Value": "IMTPE" },
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "privateRoute" : {
+      "Type"        : "AWS::EC2::Route",
+      "Properties"  : {
+        "DestinationCidrBlock"  : "0.0.0.0/0",
+        "RouteTableId"          : { "Ref" : "privateRouteTable"   },
+        "GatewayId"             : { "Ref" : "internetGateway" }
+      },
+      "DependsOn"   : "gatewayToInternet"
+    },
+
+    "AppATableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "AppASubnet" },
+        "RouteTableId" : { "Ref" : "privateRouteTable" }
+      }
+    },
+    "AppBTableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "AppBSubnet" },
+        "RouteTableId" : { "Ref" : "privateRouteTable" }
+      }
+    },
+    "AppCTableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "AppCSubnet" },
+        "RouteTableId" : { "Ref" : "privateRouteTable" }
+      }
+    },
+    "DBATableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "DBASubnet" },
+        "RouteTableId" : { "Ref" : "privateRouteTable" }
+      }
+    },
+    "DBBTableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "DBBSubnet" },
+        "RouteTableId" : { "Ref" : "privateRouteTable" }
+      }
+    },
+    "DBCTableAssociation" : {
+      "Type"        : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties"  : {
+        "SubnetId"     : { "Ref" : "DBCSubnet" },
+        "RouteTableId" : { "Ref" : "privateRouteTable" }
+      }
+    },
+
+    "PublicNetworkAcl" : {
+      "Type" : "AWS::EC2::NetworkAcl",
+      "Properties" : {
+        "VpcId" : { "Ref" : "clientVPC" },
+        "Tags" : [
+          { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " Public Network ACL"]] }},
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} },
+          { "Key": "LOB",       "Value": "IMTPE" },
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "PrivateNetworkAcl" : {
+      "Type" : "AWS::EC2::NetworkAcl",
+      "Properties" : {
+        "VpcId" : { "Ref" : "clientVPC" },
+        "Tags" : [
+          { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " Private Network ACL"]] }},
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} },
+          { "Key": "LOB",       "Value": "IMTPE" },
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+
+    "InboundHTTPPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" },
+        "RuleNumber" : "100",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : { "From" : "80", "To" : "80" }
+      }
+    },
+
+    "InboundHTTPSPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" },
+        "RuleNumber" : "110",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : { "From" : "443", "To" : "443" }
+      }
+    },
+    "InboundSSHPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" },
+        "RuleNumber" : "120",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : { "From" : "22", "To" : "22" }
+      }
+    },
+    "InboundEphemeralPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" },
+        "RuleNumber" : "200",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : { "From" : "1024", "To" : "65535" }
+      }
+    },
+    "OutboundPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" },
+        "RuleNumber" : "100",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "true",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : { "From" : "0", "To" : "65535" }
+      }
+    },
+
+    "InboundHTTPPrivateNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" },
+        "RuleNumber" : "100",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock": {"Fn::FindInMap" : ["IP",{"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "Public"]}, "ALL"]},
+        "PortRange" : { "From" : "80", "To" : "80" }
+      }
+    },
+    "InboundHTTPSPrivateNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" },
+        "RuleNumber" : "110",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock": {"Fn::FindInMap" : ["IP",{"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "Public"]}, "ALL"]},
+        "PortRange" : { "From" : "443", "To" : "443" }
+      }
+    },
+    "InboundSSHPrivateNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" },
+        "RuleNumber" : "120",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock": {"Fn::FindInMap" : ["IP", {"Fn::FindInMap" : ["Clients", {"Ref" : "MNE" }, "NAT"]}, "ALL"]},
+        "PortRange" : { "From" : "22", "To" : "22" }
+      }
+    },
+    "InboundEphemeralPrivateNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" },
+        "RuleNumber" : "200",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : { "From" : "1024", "To" : "65535" }
+      }
+    },
+    "OutboundPrivateNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" },
+        "RuleNumber" : "100",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "true",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : { "From" : "0", "To" : "65535" }
+      }
+    },
+
+    "LBANetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "LBASubnet" },
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" }
+      }
+    },
+    "LBBNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "LBBSubnet" },
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" }
+      }
+    },
+    "LBCNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "LBCSubnet" },
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" }
+      }
+    },
+    "NATANetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "NATASubnet" },
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" }
+      }
+    },
+    "NATBNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "NATBSubnet" },
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" }
+      }
+    },
+    "NATCNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "NATCSubnet" },
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" }
+      }
+    },
+    "AppANetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "AppASubnet" },
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" }
+      }
+    },
+    "AppBNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "AppBSubnet" },
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" }
+      }
+    },
+    "AppCNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "AppCSubnet" },
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" }
+      }
+    }, 
+    "DBANetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "DBASubnet" },
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" }
+      }
+    },
+    "DBBNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "DBBSubnet" },
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" }
+      }
+    },
+    "DBCNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "DBCSubnet" },
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" }
+      }
+    },
+    "LBSG" : {
+      "Type"        : "AWS::EC2::SecurityGroup",
+      "Properties"  : {
+        "GroupDescription"      : "LB Security Group",
+        "VpcId"                 : { "Ref" : "clientVPC" }, 
+        "SecurityGroupEgress"   : [
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "80", 
+            "ToPort"        : "80", 
+            "CidrIp"        : "0.0.0.0/0"
+          },
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "443", 
+            "ToPort"        : "443", 
+            "CidrIp"        : "0.0.0.0/0"
+          }
+        ],
+        "SecurityGroupIngress"  : [
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "80", 
+            "ToPort"        : "80", 
+            "CidrIp"        : "0.0.0.0/0" 
+          },
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "443", 
+            "ToPort"        : "443", 
+            "CidrIp"        : "0.0.0.0/0" 
+          },
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "22", 
+            "ToPort"        : "22", 
+            "CidrIp"        : "10.100.0.0/23" 
+          }
+        ],
+        "Tags"                  : [
+          { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " LB Security Group"]] }},
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "MgtNatSG" : {
+      "Type"        : "AWS::EC2::SecurityGroup",
+      "Properties"  : {
+        "GroupDescription"      : "Mgt-NAT Security Group",
+        "VpcId"                 : { "Ref" : "clientVPC" }, 
+        "SecurityGroupEgress"   : [
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "0", 
+            "ToPort"        : "65535", 
+            "CidrIp"        : "0.0.0.0/0" 
+          }
+        ],
+        "SecurityGroupIngress"  : [
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "22", 
+            "ToPort"        : "22", 
+            "CidrIp"        : "0.0.0.0/0" 
+          }
+        ],
+        "Tags"                  : [
+          { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " Mgt-NaT Security Group"]] }},
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "AppSG" : {
+      "Type"        : "AWS::EC2::SecurityGroup",
+      "Properties"  : {
+        "GroupDescription"      : "App Security Group",
+        "VpcId"                 : { "Ref" : "clientVPC" }, 
+        "SecurityGroupEgress"   : [
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "3306", 
+            "ToPort"        : "3306", 
+            "CidrIp"        : "10.4.1.192/26"
+          },
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "80", 
+            "ToPort"        : "80", 
+            "CidrIp"        : "0.0.0.0/0"
+          },
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "443", 
+            "ToPort"        : "443", 
+            "CidrIp"        : "0.0.0.0/0"
+          },
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "25", 
+            "ToPort"        : "25", 
+            "CidrIp"        : "0.0.0.0/0"
+          }
+        ],
+        "SecurityGroupIngress"  : [
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "80", 
+            "ToPort"        : "80", 
+            "CidrIp"        : "10.4.1.0/26" 
+          },
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "443", 
+            "ToPort"        : "443", 
+            "CidrIp"        : "10.4.1.0/26" 
+          }, 
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "22", 
+            "ToPort"        : "22", 
+            "CidrIp"        : "10.100.0.0/23" 
+          },
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "22", 
+            "ToPort"        : "22", 
+            "CidrIp"        : "10.4.1.64/26" 
+          }
+        ],
+        "Tags"                  : [
+          { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " App Security Group"]] }},
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    },
+    "DBSG" : {
+      "Type"        : "AWS::EC2::SecurityGroup",
+      "Properties"  : {
+        "GroupDescription"      : "DB Security Group",
+        "VpcId"                 : { "Ref" : "clientVPC" }, 
+        "SecurityGroupEgress"   : [
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "80", 
+            "ToPort"        : "80", 
+            "CidrIp"        : "0.0.0.0/0"
+          }, 
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "443", 
+            "ToPort"        : "443", 
+            "CidrIp"        : "0.0.0.0/0"
+          },
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "25", 
+            "ToPort"        : "25", 
+            "CidrIp"        : "0.0.0.0/0"
+          }
+        ],
+        "SecurityGroupIngress"  : [
+          {
+            "IpProtocol"    : "tcp", 
+            "FromPort"      : "3306", 
+            "ToPort"        : "3306", 
+            "CidrIp"        : "10.4.1.128/26" 
+          }
+        ],
+        "Tags"                  : [
+          { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " DB Security Group"]] }},
+          { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
+          { "Key": "LOB",       "Value": "IMTPE" }, 
+          { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
+        ]
+      }
+    }
+
+  }
+}
