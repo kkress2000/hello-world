@@ -9,7 +9,7 @@
       "ConstraintDescription" : "must be non-Production, the only option currently."
     },
     "MNE" : {
-      "Description" : "App Mnemonic or client identifier",
+      "Description" : "App or client identifier",
       "Type"  : "String",
       "Default" : "RND",
       "AllowedValues" : ["RND"], 
@@ -31,26 +31,13 @@
       "RNDDB"   : {"A" : "10.4.0.192/28", "B" : "10.4.0.208/28", "C" : "10.4.0.224/28","ALL": "10.4.0.192/26"},
       "RNDPUBLIC"  : {"ALL" : "10.4.0.0/25" }, 
       "RNDPRIVATE" : {"ALL" : "10.4.0.128/25" },
-      "RNDALL"     : {"ALL" : "10.4.0.0/24" },
-
-      "XXXLB"   : {"A" : "10.4.1.0/28",   "B" : "10.4.1.16/28",  "C" : "10.4.1.32/28", "ALL": "10.4.1.0/26"},
-      "xxxNAT"  : {"A" : "10.4.1.64/28",  "B" : "10.4.1.80/28",  "C" : "10.4.1.96/28", "ALL": "10.4.1.64/26"},
-      "xxxApp"  : {"A" : "10.4.1.128/28", "B" : "10.4.1.144/28", "C" : "10.4.1.160/28","ALL": "10.4.1.128/26"},
-      "xxxDB"   : {"A" : "10.4.1.192/28", "B" : "10.4.1.208/28", "C" : "10.4.1.224/28","ALL": "10.4.1.192/26"},
-      "xxxPUBLIC"  : {"ALL" : "10.4.1.0/25" }, 
-      "xxxPRIVATE" : {"ALL" : "10.4.1.128/25" },
-      "xxxALL"     : {"ALL" : "10.4.1.0/24" }
+      "RNDALL"     : {"ALL" : "10.4.0.0/24" }
     },
     "Clients" : {
       "RND" : { 
         "LB"        : "RNDLB",      "NAT"       : "RNDNAT",         "App"       : "RNDApp", 
         "DB"        : "RNDDB",      "Public"    : "RNDPUBLIC",      "Private"   : "RNDPRIVATE",
         "ALL"       : "RNDALL"
-      },
-      "XXX" : { 
-        "LB"        : "XXXLB",      "NAT"       : "XXXNAT",         "App"       : "XXXApp", 
-        "DB"        : "XXXDB",      "Public"    : "XXXPUBLIC",      "Private"   : "XXXPRIVATE",
-        "ALL"       : "XXXALL"
       }
     }
   },
@@ -65,7 +52,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["", ["Client ",{"Ref" : "MNE"}, " VPC"]] }},
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -81,7 +67,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " LB Subnet A"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -97,7 +82,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " LB Subnet B"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -113,7 +97,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " LB Subnet C"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -129,7 +112,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " NAT Subnet A"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -145,7 +127,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " NAT Subnet B"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -161,7 +142,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " NAT Subnet C"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -177,7 +157,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " App Subnet A"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -193,7 +172,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " App Subnet B"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -209,7 +187,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " App Subnet C"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -225,7 +202,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " DB Subnet A"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -241,7 +217,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " DB Subnet B"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -257,7 +232,6 @@
         "Tags": [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",[{"Ref" : "MNE"}, " DB Subnet C"]] }}, 
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -268,7 +242,6 @@
         "Tags" : [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",["Client ", {"Ref" : "MNE"} , " Internet Gateway"]] }},
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} },
-          { "Key": "LOB",       "Value": "IMTPE" },
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -287,7 +260,6 @@
         "Tags"      : [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",["Client ", {"Ref" : "MNE"} , " Public"]] }},
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} },
-          { "Key": "LOB",       "Value": "IMTPE" },
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -353,7 +325,6 @@
         "Tags"      : [
           { "Key": "Name",      "Value": {"Fn::Join" : ["",["Client ", {"Ref" : "MNE"} , " Private"]] }},
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} },
-          { "Key": "LOB",       "Value": "IMTPE" },
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -418,7 +389,6 @@
         "Tags" : [
           { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " Public Network ACL"]] }},
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} },
-          { "Key": "LOB",       "Value": "IMTPE" },
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -430,7 +400,6 @@
         "Tags" : [
           { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " Private Network ACL"]] }},
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} },
-          { "Key": "LOB",       "Value": "IMTPE" },
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -685,7 +654,6 @@
         "Tags"                  : [
           { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " LB Security Group"]] }},
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -714,7 +682,6 @@
         "Tags"                  : [
           { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " Mgt-NaT Security Group"]] }},
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -779,7 +746,6 @@
         "Tags"                  : [
           { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " App Security Group"]] }},
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
@@ -820,7 +786,6 @@
         "Tags"                  : [
           { "Key": "Name",      "Value": { "Fn::Join" : ["",[{"Ref" : "MNE"}, " DB Security Group"]] }},
           { "Key": "MNE",       "Value": {"Ref" : "MNE"} }, 
-          { "Key": "LOB",       "Value": "IMTPE" }, 
           { "Key": "OWNER",     "Value": {"Ref" : "Owner"} }
         ]
       }
